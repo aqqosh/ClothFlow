@@ -66,7 +66,7 @@ def crop_zoom_pad(image_source, image_redressed):
     height_bias = randrange(300, 700)
     width_bias = randrange(0, 100)
     subimage_source = image_source[0:height_bias, 0:image_source.shape[1] - width_bias]
-    subimage_redressed = image_source[0:height_bias, 0:image_source.shape[1] - width_bias]
+    subimage_redressed = image_redressed[0:height_bias, 0:image_redressed.shape[1] - width_bias]
 
     if height_bias < 450:
         coef = random.randint(20, 30)/10
@@ -153,16 +153,21 @@ def data_load(source_dir, redressed_dir):
         #cv2.imwrite('test_s' + str(0) + '.jpg', source)
         #cv2.imwrite('test_r' + str(0) + '.jpg', redressed)
         for j in range(0,9):
+            source1, redressed1 = source, redressed
             print(str(j) + '/25 crops')
-            tagert_source, tagert_redressed = crop_zoom_pad(source, redressed)
+            source2, redressed2 = crop_zoom_pad(source1, redressed1)
+            #cv2.imwrite('test_s2' + str(0) + '.jpg', source2)
+            #cv2.imwrite('test_r2' + str(0) + '.jpg', redressed2)
             for k in range(0,9):
+                source3, redressed3 = source2, redressed2
                 print(str(k) + '/augmentations')
-                source, redressed = apply_augmentation(tagert_source, tagert_redressed)
-                source, redressed = resize(tagert_source, tagert_redressed)
+                source4, redressed4 = apply_augmentation(source3, redressed3)
+                #cv2.imwrite('test_s4' + str(0) + '.jpg', source4)
+                #cv2.imwrite('test_r4' + str(0) + '.jpg', redressed4)
+                source4, redressed4 = resize(source4, redressed4)
 
-                cv2.imwrite('/home/arcsinx/ClothFlow/reDress/pairs/source/' + str(i) + str(j) + str(k) + '.jpg', source)
-                cv2.imwrite('/home/arcsinx/ClothFlow/reDress/pairs/redressed/' + str(i) + str(j) + str(k) + '.jpg', redressed)
-                source, redressed = tagert_source, tagert_source
+                cv2.imwrite('/home/arcsinx/ClothFlow/reDress/pairs/source/' + str(i) + str(j) + str(k) + '.jpg', source4)
+                cv2.imwrite('/home/arcsinx/ClothFlow/reDress/pairs/redressed/' + str(i) + str(j) + str(k) + '.jpg', redressed4)
         print('File is done')
 
 
