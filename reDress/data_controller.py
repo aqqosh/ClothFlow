@@ -11,62 +11,10 @@ from random import randrange
 #request fgure mask
 url_to_figure = 'http://195.201.163.22:5005/lip_figure'
 source_dir = '/home/arcsinx/ClothFlow/reDress/dataGAN_v0.1/source_1'
-redressed_dir = '/home/arcsinx/ClothFlow/reDress/dataGAN_v0.1/source_2'
+redressed_dir = '/home/arcsinx/ClothFlow/reDress/dataGAN_v0.1/redressed_1'
 
 HOGCV = cv2.HOGDescriptor()
 HOGCV.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
-
-def data_load(source_dir, redressed_dir):
-    #TODO add exp len = len
-    source_dir_list = os.listdir(source_dir)
-    redressed_dir_list = os.listdir(redressed_dir)
-
-    for i in range(0, len(source_dir_list)):
-        source_name = source_dir_list[i]
-        print('File: ' + source_name)
-        redressed_name = redressed_dir_list[i]
-        source = cv2.imread(source_dir + '/' + source_name, 1)
-        redressed = cv2.imread(redressed_dir + '/' + redressed_name, 1)
-
-        source, redressed = detect(source, redressed)
-        cv2.imwrite('reDress/crop' + str(i) + '.jpg', source)
-        #TODO СРОЧНО УБРАТЬ ЭТУ ХНЮ
-        crop = open('reDress/crop' + str(i) + '.jpg', 'rb')
-        headers = {
-            'cache-control': "no-cache",
-        }
-        data = {
-            'some_input_name': 'some input value',
-            'another_input_name': 'another input value',
-        }
-        files = {
-            'file': crop
-        }
-        r = requests.post(url_to_figure, headers=headers, data=data, files=files)
-        mask = r.content
-        file = open('reDress/masks/' + str(i) + '.jpg', "wb")
-        file.write(mask)
-        file.close()
-        #mask = define_figure_mask(url_to_figure, source)
-        #cv2.imwrite('mask.jpg', mask)
-        mask = cv2.imread('reDress/masks/' + str(i) + '.jpg')
-        source = crop_by_figure(source, mask)
-        redressed = crop_by_figure(redressed, mask)
-
-        #cv2.imwrite('test_s' + str(0) + '.jpg', source)
-        #cv2.imwrite('test_r' + str(0) + '.jpg', redressed)
-        for j in range(0,25):
-            print(str(j) + '/25 crops')
-            source, redressed = crop_zoom_pad(source, redressed)
-            for k in range(0,10):
-                print(str(k) + '/augmentations')
-                source, redressed = apply_augmentation(source, redressed)
-                source, redressed = resize(source, redressed)
-
-                cv2.imwrite('/home/arcsinx/ClothFlow/reDress/pairs/source/' + str(i) + str(j) + str(k) + '.jpg', source)
-                cv2.imwrite('/home/arcsinx/ClothFlow/reDress/pairs/redressed/' + str(i) + str(j) + str(k) + '.jpg', redressed)
-                print('File is done')
-
 
 def detect(image1, image2):
     bounding_box_cordinates, weights =  HOGCV.detectMultiScale(image1, winStride = (4, 4), padding = (8, 8), scale = 1.03)
@@ -165,6 +113,59 @@ def resize(image_source, image_redressed):
 
     return source, redressed
 
+def data_load(source_dir, redressed_dir):
+    #TODO add exp len = len
+    source_dir_list = os.listdir(source_dir)
+    redressed_dir_list = os.listdir(redressed_dir)
+
+    for i in range(0, len(source_dir_list)):
+        source_name = source_dir_list[i]
+        print('File: ' + str(i) + '   ' + source_name)
+        redressed_name = redressed_dir_list[i]
+        source = cv2.imread(source_dir + '/' + source_name, 1)
+        redressed = cv2.imread(redressed_dir + '/' + redressed_name, 1)
+
+        source, redressed = detect(source, redressed)
+        cv2.imwrite('reDress/crop' + str(i) + '.jpg', source)
+        #TODO СРОЧНО УБРАТЬ ЭТУ ХНЮ
+        crop = open('reDress/crop' + str(i) + '.jpg', 'rb')
+        headers = {
+            'cache-control': "no-cache",
+        }
+        data = {
+            'some_input_name': 'some input value',
+            'another_input_name': 'another input value',
+        }
+        files = {
+            'file': crop
+        }
+        r = requests.post(url_to_figure, headers=headers, data=data, files=files)
+        mask = r.content
+        file = open('reDress/masks/' + str(i) + '.jpg', "wb")
+        file.write(mask)
+        file.close()
+        #mask = define_figure_mask(url_to_figure, source)
+        #cv2.imwrite('mask.jpg', mask)
+        mask = cv2.imread('reDress/masks/' + str(i) + '.jpg')
+        source = crop_by_figure(source, mask)
+        redressed = crop_by_figure(redressed, mask)
+
+        #cv2.imwrite('test_s' + str(0) + '.jpg', source)
+        #cv2.imwrite('test_r' + str(0) + '.jpg', redressed)
+        for j in range(0,9):
+            print(str(j) + '/25 crops')
+            tagert_source, tagert_redressed = crop_zoom_pad(source, redressed)
+            for k in range(0,9):
+                print(str(k) + '/augmentations')
+                source, redressed = apply_augmentation(tagert_source, tagert_redressed)
+                source, redressed = resize(tagert_source, tagert_redressed)
+
+                cv2.imwrite('/home/arcsinx/ClothFlow/reDress/pairs/source/' + str(i) + str(j) + str(k) + '.jpg', source)
+                cv2.imwrite('/home/arcsinx/ClothFlow/reDress/pairs/redressed/' + str(i) + str(j) + str(k) + '.jpg', redressed)
+                source, redressed = tagert_source, tagert_source
+        print('File is done')
+
+
 
 data_load(source_dir, redressed_dir)
 
@@ -238,7 +239,7 @@ def prepare_bg_samples(bg_dir, bg_size, bg_samples_from_image):
 
 
 
-
+"""
 #### PIPELINE NOTES
 data_load('raw_data/raw/sources', 'raw_data/raw/redressed')
 
@@ -258,3 +259,4 @@ source, redressed = resize(source, redressed)
 # save result
 cv2.imwrite('test_s' + str(0) + '.jpg', source)
 cv2.imwrite('test_r' + str(0) + '.jpg', redressed)
+"""
