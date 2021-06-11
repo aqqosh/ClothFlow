@@ -7,33 +7,14 @@ import albumentations as A
 from random import randrange
 
 #TODO code review
-#TODO dir path in functions
-#TODO change functions names
-#TODO убрать папки в первых функциях кода
-source_dirs = ['raw_data/raw/sources', 'raw_data/raw/redressed']
-cropped_dirs = ['raw_data/raw/sources_cropped', 'raw_data/raw/redressed_cropped']
-bg_dir = 'raw_data/raw/backgrounds'
-bg_size = (512, 512)
-bg_samples_from_image = 5
-images_amount = 1
-input_dir1 = 'raw_data/raw/sources_cropped'
-output_dir1 = 'raw_data/raw/sources_figures'
-input_dir2 = 'raw_data/raw/redressed_cropped'
-output_dir2 = 'raw_data/raw/redressed_figures'
-images_dir1 = 'raw_data/raw/sources_cropped'
-figures_dir1 = 'raw_data/raw/sources_figures'
-humans_dir1 = 'raw_data/raw/sources_humans'
 
 #request fgure mask
 url_to_figure = 'http://195.201.163.22:5005/lip_figure'
-
+source_dir = 'reDress/raw_data/raw/sources'
+redressed_dir = 'reDress/raw_data/raw/redressed'
 
 HOGCV = cv2.HOGDescriptor()
 HOGCV.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
-
-#source_image
-#redressed_image
-
 
 def data_load(source_dir, redressed_dir):
     #TODO add exp len = len
@@ -43,8 +24,8 @@ def data_load(source_dir, redressed_dir):
     for index in range(0, len(source_dir_list)):
         source_name = source_dir_list[index]
         redressed_name = redressed_dir_list[index]
-        source = cv2.imread('source_dir/' + source_name, 1)
-        redressed = cv2.imread('redressed_dir' + redressed_name, 1)
+        source = cv2.imread(source_dir + '/' + source_name, 1)
+        redressed = cv2.imread(redressed_dir + '/' + redressed_name, 1)
 
         source, redressed = detect(source, redressed)
         cv2.imwrite('reDress/crop' + str(index) + '.jpg', source)
@@ -67,6 +48,19 @@ def data_load(source_dir, redressed_dir):
         file.close()
         #mask = define_figure_mask(url_to_figure, source)
         #cv2.imwrite('mask.jpg', mask)
+        mask = cv2.imread('reDress/masks/' + str(index) + '.jpg')
+        source = crop_by_figure(source, mask)
+        redressed = crop_by_figure(redressed, mask)
+
+        #cv2.imwrite('test_s' + str(0) + '.jpg', source)
+        #cv2.imwrite('test_r' + str(0) + '.jpg', redressed)
+
+        source, redressed = crop_zoom_pad(source, redressed)
+        source, redressed = apply_augmentation(source, redressed)
+        source, redressed = resize(source, redressed)
+
+        cv2.imwrite('test_s' + str(0) + '.jpg', source)
+        cv2.imwrite('test_r' + str(0) + '.jpg', redressed)
 
 
 def detect(image1, image2):
@@ -108,35 +102,11 @@ def define_figure_mask(url_to_figure, source):
 
 
 def crop_by_figure(source, mask):
-    images_names = os.listdir(images_dir)
-    for idx, image_name in enumerate(images_names):
-        src1 = cv2.imread(images_dir + '/' + image_name, 1)
-        figure = cv2.imread(figures_dir + '/' + image_name, 1)
-        #figure = cv2.bitwise_not(figure)
+    #figure = cv2.bitwise_not(figure)
+    mask_out = cv2.subtract(mask, source)
+    mask_out = cv2.subtract(mask, mask_out)
 
-        mask_out = cv2.subtract(mask, source)
-        mask_out = cv2.subtract(mask, mask_out)
-
-        cv2.imwrite('mask_out.jpg', mask_out)
-        print("wrt")
-    return
-
-def prepare_human_samples(human_dir, human_size, human_samples_from_image):
-    #TODO it better works with face recognition
-    human_samples_from_image = 25
-    human_names = os.listdir(human_dir)
-    #height, width = (400, 200)
-    for idx, human_name in enumerate(human_names):
-        human_image = cv2.imread(human_dir + '/' + human_name, 1)
-        img_h, img_w, _ = human_image.shape
-        for i in range(0, human_samples_from_image):
-            height = randrange(300, 600)
-            width = randrange(250, img_w)
-            r = randrange(0, img_w - width)
-            c = randrange(0, img_h - height - 100)
-            sample = human_image[r:r+height,c:c+width]
-            cv2.imwrite('raw_data/raw/human_cropped/' + str(idx) + str(i) + '.jpg', sample)
-    return
+    return mask_out
 
 def crop_zoom_pad(image_source, image_redressed):
     color = [0, 0, 0]
@@ -163,7 +133,7 @@ def crop_zoom_pad(image_source, image_redressed):
 
     return resized_source, resized_redressed
 
-def apply_augmentation(image_source, image_redressed):
+def apply_augmentation(source, redressed):
     transform = A.Compose(
     [
         A.HorizontalFlip(p=0.5),
@@ -191,7 +161,7 @@ def resize(image_source, image_redressed):
     return source, redressed
 
 
-
+data_load(source_dir, redressed_dir)
 
 
 
@@ -228,7 +198,24 @@ def prepare_bg_from_center(bg_dir, bg_size):
 
         cv2.imwrite('raw_data/raw/backgrounds_cropped/' + str(idx) + '.jpg', crop_human_image)
     return
-"""
+
+
+def prepare_human_samples(human_dir, human_size, human_samples_from_image):
+    #TODO it better works with face recognition
+    human_samples_from_image = 25
+    human_names = os.listdir(human_dir)
+    #height, width = (400, 200)
+    for idx, human_name in enumerate(human_names):
+        human_image = cv2.imread(human_dir + '/' + human_name, 1)
+        img_h, img_w, _ = human_image.shape
+        for i in range(0, human_samples_from_image):
+            height = randrange(300, 600)
+            width = randrange(250, img_w)
+            r = randrange(0, img_w - width)
+            c = randrange(0, img_h - height - 100)
+            sample = human_image[r:r+height,c:c+width]
+            cv2.imwrite('raw_data/raw/human_cropped/' + str(idx) + str(i) + '.jpg', sample)
+    return
 
 def prepare_bg_samples(bg_dir, bg_size, bg_samples_from_image):
     bgs_names = os.listdir(bg_dir)
@@ -242,7 +229,7 @@ def prepare_bg_samples(bg_dir, bg_size, bg_samples_from_image):
             sample = human_image[r:r+height,c:c+width]
             cv2.imwrite('raw_data/raw/backgrounds_cropped/' + str(idx) + str(i) + '.jpg', sample)
     return
-
+"""
 
 
 
