@@ -10,8 +10,8 @@ from random import randrange
 
 #request fgure mask
 url_to_figure = 'http://195.201.163.22:5005/lip_figure'
-source_dir = 'reDress/raw_data/raw/sources'
-redressed_dir = 'reDress/raw_data/raw/redressed'
+source_dir = '/home/arcsinx/ClothFlow/reDress/dataGAN_v0.1/source_1'
+redressed_dir = '/home/arcsinx/ClothFlow/reDress/dataGAN_v0.1/source_2'
 
 HOGCV = cv2.HOGDescriptor()
 HOGCV.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
@@ -21,16 +21,17 @@ def data_load(source_dir, redressed_dir):
     source_dir_list = os.listdir(source_dir)
     redressed_dir_list = os.listdir(redressed_dir)
 
-    for index in range(0, len(source_dir_list)):
-        source_name = source_dir_list[index]
-        redressed_name = redressed_dir_list[index]
+    for i in range(0, len(source_dir_list)):
+        source_name = source_dir_list[i]
+        print('File: ' + source_name)
+        redressed_name = redressed_dir_list[i]
         source = cv2.imread(source_dir + '/' + source_name, 1)
         redressed = cv2.imread(redressed_dir + '/' + redressed_name, 1)
 
         source, redressed = detect(source, redressed)
-        cv2.imwrite('reDress/crop' + str(index) + '.jpg', source)
+        cv2.imwrite('reDress/crop' + str(i) + '.jpg', source)
         #TODO СРОЧНО УБРАТЬ ЭТУ ХНЮ
-        crop = open('reDress/crop' + str(index) + '.jpg', 'rb')
+        crop = open('reDress/crop' + str(i) + '.jpg', 'rb')
         headers = {
             'cache-control': "no-cache",
         }
@@ -43,24 +44,28 @@ def data_load(source_dir, redressed_dir):
         }
         r = requests.post(url_to_figure, headers=headers, data=data, files=files)
         mask = r.content
-        file = open('reDress/masks/' + str(index) + '.jpg', "wb")
+        file = open('reDress/masks/' + str(i) + '.jpg', "wb")
         file.write(mask)
         file.close()
         #mask = define_figure_mask(url_to_figure, source)
         #cv2.imwrite('mask.jpg', mask)
-        mask = cv2.imread('reDress/masks/' + str(index) + '.jpg')
+        mask = cv2.imread('reDress/masks/' + str(i) + '.jpg')
         source = crop_by_figure(source, mask)
         redressed = crop_by_figure(redressed, mask)
 
         #cv2.imwrite('test_s' + str(0) + '.jpg', source)
         #cv2.imwrite('test_r' + str(0) + '.jpg', redressed)
+        for j in range(0,25):
+            print(str(j) + '/25 crops')
+            source, redressed = crop_zoom_pad(source, redressed)
+            for k in range(0,10):
+                print(str(k) + '/augmentations')
+                source, redressed = apply_augmentation(source, redressed)
+                source, redressed = resize(source, redressed)
 
-        source, redressed = crop_zoom_pad(source, redressed)
-        source, redressed = apply_augmentation(source, redressed)
-        source, redressed = resize(source, redressed)
-
-        cv2.imwrite('test_s' + str(0) + '.jpg', source)
-        cv2.imwrite('test_r' + str(0) + '.jpg', redressed)
+                cv2.imwrite('/home/arcsinx/ClothFlow/reDress/pairs/source/' + str(i) + str(j) + str(k) + '.jpg', source)
+                cv2.imwrite('/home/arcsinx/ClothFlow/reDress/pairs/redressed/' + str(i) + str(j) + str(k) + '.jpg', redressed)
+                print('File is done')
 
 
 def detect(image1, image2):
