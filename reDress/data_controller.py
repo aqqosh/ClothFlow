@@ -10,8 +10,8 @@ from random import randrange
 
 #request fgure mask
 url_to_figure = 'http://195.201.163.22:5005/lip_figure'
-source_dir = '/home/arcsinx/ClothFlow/reDress/dataGAN_v0.1/source_1'
-redressed_dir = '/home/arcsinx/ClothFlow/reDress/dataGAN_v0.1/redressed_1'
+source_dir = '/home/arcsinx/ClothFlow/reDress/dataGAN_v0.1/source_2'
+redressed_dir = '/home/arcsinx/ClothFlow/reDress/dataGAN_v0.1/redressed_2'
 
 HOGCV = cv2.HOGDescriptor()
 HOGCV.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
@@ -23,7 +23,6 @@ def detect(image1, image2):
         cropped_image2 = image2[y:y + h, x:x + w]
 
     return cropped_image1, cropped_image2
-
 
 def define_figure_mask(url_to_figure, source):
     # IT DOESNT WORK
@@ -95,9 +94,9 @@ def apply_augmentation(source, redressed):
         A.RandomGamma(p=0.5),
         A.CLAHE(p=1),
         A.GaussNoise(p=0.2),
-        A.ElasticTransform(p=0.2),
-        A.RGBShift(p=0.2),
-        A.CoarseDropout(p=0.6)
+        #A.ElasticTransform(p=0.2),
+        #A.RGBShift(p=0.2),
+        #A.CoarseDropout(p=0.6)
     ],
     additional_targets={'redressed': 'image'}
     )
@@ -126,9 +125,14 @@ def data_load(source_dir, redressed_dir):
         redressed = cv2.imread(redressed_dir + '/' + redressed_name, 1)
 
         source, redressed = detect(source, redressed)
-        cv2.imwrite('reDress/crop' + str(i) + '.jpg', source)
+
+        #TODO СВОЙ ЗАПРОС МАСКИ НА РЕДРЕССНУТУЮ КАРТИНКУ
+        cv2.imwrite('reDress/crop/source/' + str(i) + '.jpg', source)
+        cv2.imwrite('reDress/crop/redressed/' + str(i) + '.jpg', redressed)
         #TODO СРОЧНО УБРАТЬ ЭТУ ХНЮ
-        crop = open('reDress/crop' + str(i) + '.jpg', 'rb')
+        source_crop = open('reDress/crop/source/' + str(i) + '.jpg', 'rb')
+        redressed_crop = open('reDress/crop/redressed/' + str(i) + '.jpg', 'rb')
+
         headers = {
             'cache-control': "no-cache",
         }
@@ -137,18 +141,36 @@ def data_load(source_dir, redressed_dir):
             'another_input_name': 'another input value',
         }
         files = {
-            'file': crop
+            'file': source_crop
         }
         r = requests.post(url_to_figure, headers=headers, data=data, files=files)
-        mask = r.content
-        file = open('reDress/masks/' + str(i) + '.jpg', "wb")
-        file.write(mask)
+        source_mask = r.content
+        file = open('reDress/masks/source/' + str(i) + '.jpg', "wb")
+        file.write(source_mask)
         file.close()
+
+        headers = {
+            'cache-control': "no-cache",
+        }
+        data = {
+            'some_input_name': 'some input value',
+            'another_input_name': 'another input value',
+        }
+        files = {
+            'file': redressed_crop
+        }
+        r = requests.post(url_to_figure, headers=headers, data=data, files=files)
+        redressed_mask = r.content
+        file = open('reDress/masks/redressed/' + str(i) + '.jpg', "wb")
+        file.write(redressed_mask)
+        file.close()
+
         #mask = define_figure_mask(url_to_figure, source)
         #cv2.imwrite('mask.jpg', mask)
-        mask = cv2.imread('reDress/masks/' + str(i) + '.jpg')
-        source = crop_by_figure(source, mask)
-        redressed = crop_by_figure(redressed, mask)
+        source_mask = cv2.imread('reDress/masks/source/' + str(i) + '.jpg')
+        source = crop_by_figure(source, source_mask)
+        redressed_mask = cv2.imread('reDress/masks/redressed/' + str(i) + '.jpg')
+        redressed = crop_by_figure(redressed, redressed_mask)
 
         #cv2.imwrite('test_s' + str(0) + '.jpg', source)
         #cv2.imwrite('test_r' + str(0) + '.jpg', redressed)
