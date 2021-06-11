@@ -127,3 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+*.txt
+*.zip
+*.npz
+/horse2zebra
+/reDress/dataGAN_v0.1
+/reDress/raw_data
+*.jpg
+*.png

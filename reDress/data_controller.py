@@ -47,9 +47,26 @@ def data_load(source_dir, redressed_dir):
         redressed = cv2.imread('redressed_dir' + redressed_name, 1)
 
         source, redressed = detect(source, redressed)
-        cv2.imwrite('source.jpg', source)
-        mask = define_figure_mask(url_to_figure, source)
-        cv2.imwrite('mask.jpg', mask)
+        cv2.imwrite('reDress/crop' + str(index) + '.jpg', source)
+        #TODO СРОЧНО УБРАТЬ ЭТУ ХНЮ
+        crop = open('reDress/crop' + str(index) + '.jpg', 'rb')
+        headers = {
+            'cache-control': "no-cache",
+        }
+        data = {
+            'some_input_name': 'some input value',
+            'another_input_name': 'another input value',
+        }
+        files = {
+            'file': crop
+        }
+        r = requests.post(url_to_figure, headers=headers, data=data, files=files)
+        mask = r.content
+        file = open('reDress/masks/' + str(index) + '.jpg', "wb")
+        file.write(mask)
+        file.close()
+        #mask = define_figure_mask(url_to_figure, source)
+        #cv2.imwrite('mask.jpg', mask)
 
 
 def detect(image1, image2):
