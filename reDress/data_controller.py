@@ -9,9 +9,10 @@ from random import randrange
 #TODO code review
 
 #request fgure mask
-url_to_figure = 'http://195.201.163.22:5005/lip_figure'
-source_dir = '/home/arcsinx/ClothFlow/reDress/dataGAN_v0.1/source_2'
-redressed_dir = '/home/arcsinx/ClothFlow/reDress/dataGAN_v0.1/redressed_2'
+url_to_source_figure = 'http://195.201.163.22:5005/lip_figure'
+url_to_redressed_figure = 'http://195.201.163.22:5005/lip_black'
+source_dir = '/home/arcsinx/ClothFlow/reDress/dataGAN_v0.1/source_1'
+redressed_dir = '/home/arcsinx/ClothFlow/reDress/dataGAN_v0.1/redressed_1'
 
 HOGCV = cv2.HOGDescriptor()
 HOGCV.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
@@ -63,7 +64,7 @@ def crop_by_figure(source, mask):
 def crop_zoom_pad(image_source, image_redressed):
     color = [0, 0, 0]
     height_bias = randrange(300, 700)
-    width_bias = randrange(0, 100)
+    width_bias = randrange(0, 50)
     subimage_source = image_source[0:height_bias, 0:image_source.shape[1] - width_bias]
     subimage_redressed = image_redressed[0:height_bias, 0:image_redressed.shape[1] - width_bias]
 
@@ -88,12 +89,12 @@ def crop_zoom_pad(image_source, image_redressed):
 def apply_augmentation(source, redressed):
     transform = A.Compose(
     [
-        A.HorizontalFlip(p=0.5),
+        A.HorizontalFlip(p=0.5)
         #A.ShiftScaleRotate(p=0.3),
-        A.RandomBrightnessContrast(p=0.5),
-        A.RandomGamma(p=0.5),
-        A.CLAHE(p=1),
-        A.GaussNoise(p=0.2),
+        #A.RandomBrightnessContrast(p=0.5),
+        #A.RandomGamma(p=0.5),
+        #A.CLAHE(p=0.5),
+        #.GaussNoise(p=0.2),
         #A.ElasticTransform(p=0.2),
         #A.RGBShift(p=0.2),
         #A.CoarseDropout(p=0.6)
@@ -143,7 +144,7 @@ def data_load(source_dir, redressed_dir):
         files = {
             'file': source_crop
         }
-        r = requests.post(url_to_figure, headers=headers, data=data, files=files)
+        r = requests.post(url_to_source_figure, headers=headers, data=data, files=files)
         source_mask = r.content
         file = open('reDress/masks/source/' + str(i) + '.jpg', "wb")
         file.write(source_mask)
@@ -159,7 +160,7 @@ def data_load(source_dir, redressed_dir):
         files = {
             'file': redressed_crop
         }
-        r = requests.post(url_to_figure, headers=headers, data=data, files=files)
+        r = requests.post(url_to_redressed_figure, headers=headers, data=data, files=files)
         redressed_mask = r.content
         file = open('reDress/masks/redressed/' + str(i) + '.jpg', "wb")
         file.write(redressed_mask)
@@ -168,19 +169,20 @@ def data_load(source_dir, redressed_dir):
         #mask = define_figure_mask(url_to_figure, source)
         #cv2.imwrite('mask.jpg', mask)
         source_mask = cv2.imread('reDress/masks/source/' + str(i) + '.jpg')
-        source = crop_by_figure(source, source_mask)
+        #source = crop_by_figure(source, source_mask)
+        source = source_mask
         redressed_mask = cv2.imread('reDress/masks/redressed/' + str(i) + '.jpg')
         redressed = crop_by_figure(redressed, redressed_mask)
 
         #cv2.imwrite('test_s' + str(0) + '.jpg', source)
         #cv2.imwrite('test_r' + str(0) + '.jpg', redressed)
-        for j in range(0,9):
+        for j in range(0,5):
             source1, redressed1 = source, redressed
-            print(str(j) + '/25 crops')
+            print(str(j) + '/crops')
             source2, redressed2 = crop_zoom_pad(source1, redressed1)
             #cv2.imwrite('test_s2' + str(0) + '.jpg', source2)
             #cv2.imwrite('test_r2' + str(0) + '.jpg', redressed2)
-            for k in range(0,9):
+            for k in range(0,3):
                 source3, redressed3 = source2, redressed2
                 print(str(k) + '/augmentations')
                 source4, redressed4 = apply_augmentation(source3, redressed3)
@@ -192,13 +194,30 @@ def data_load(source_dir, redressed_dir):
                 cv2.imwrite('/home/arcsinx/ClothFlow/reDress/pairs/redressed/' + str(i) + str(j) + str(k) + '.jpg', redressed4)
         print('File is done')
 
-
-
 data_load(source_dir, redressed_dir)
 
-
-
-
+"""
+source = cv2.imread('/home/arcsinx/ClothFlow/real_test6.jpg', 1)
+source_crop = source
+headers = {
+    'cache-control': "no-cache",
+}
+data = {
+    'some_input_name': 'some input value',
+    'another_input_name': 'another input value',
+}
+files = {
+    'file': source_crop
+}
+r = requests.post(url_to_figure, headers=headers, data=data, files=files)
+source_mask = r.content
+file = open('infetence_mask.jpg', "wb")
+file.write(source_mask)
+file.close()
+source_mask =cv2.imread('/home/arcsinx/ClothFlow/inference_mask.png', 1)
+source = crop_by_figure(source, source_mask)
+cv2.imwrite('/home/arcsinx/ClothFlow/test.jpg', source)
+"""
 
 
 
